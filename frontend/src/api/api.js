@@ -40,6 +40,23 @@ export const authApi = {
     createApiClient().post('/auth/register', sanitiseObject({ username, email, password, role })),
 };
 
+export const adminApi = {
+  listUsers: () =>
+    createApiClient().get('/auth/admin/users'),
+
+  getUser: (id) =>
+    createApiClient().get(`/auth/admin/users/${id}`),
+
+  createUser: (data) =>
+    createApiClient().post('/auth/admin/users', sanitiseObject(data)),
+
+  updateUser: (id, data) =>
+    createApiClient().put(`/auth/admin/users/${id}`, sanitiseObject(data)),
+
+  deleteUser: (id) =>
+    createApiClient().delete(`/auth/admin/users/${id}`),
+};
+
 export const leaveApi = {
   getLeaveRequests: () =>
     createApiClient().get('/leave'),

@@ -7,6 +7,14 @@ spring:
   cloud:
     gateway:
       routes:
+        - id: auth-admin
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
+          predicates:
+            - Path=/auth/admin/**
+          filters:
+            - name: AuthenticationFilter
+            - name: LoggingFilter
+
         - id: auth-service
           uri: ${AUTH_SERVICE_URL:http://localhost:8081}
           predicates:

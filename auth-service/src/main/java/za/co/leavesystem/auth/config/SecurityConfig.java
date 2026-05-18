@@ -15,6 +15,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import za.co.leavesystem.auth.filter.JwtAdminFilter;
 import za.co.leavesystem.auth.filter.RateLimitFilter;
 
 import java.util.List;
@@ -24,9 +25,11 @@ import java.util.List;
 public class SecurityConfig {
 
     private final RateLimitFilter rateLimitFilter;
+    private final JwtAdminFilter jwtAdminFilter;
 
-    public SecurityConfig(RateLimitFilter rateLimitFilter) {
+    public SecurityConfig(RateLimitFilter rateLimitFilter, JwtAdminFilter jwtAdminFilter) {
         this.rateLimitFilter = rateLimitFilter;
+        this.jwtAdminFilter = jwtAdminFilter;
     }
 
     @Bean
@@ -49,6 +52,7 @@ public class SecurityConfig {
                 ).permitAll()
                 .anyRequest().authenticated()
             )
+            .addFilterBefore(jwtAdminFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
