@@ -1,4 +1,4 @@
-# Start-App.ps1 : builds and starts all services for the Secure Leave Management System
+# Start-App.ps1 : builds and starts all services via Docker Compose
 
 $root = Split-Path -Parent $PSScriptRoot
 
@@ -8,99 +8,75 @@ Write-Host "  NWU ITRI615 | Colile Sibanda" -ForegroundColor Cyan
 Write-Host "============================================================" -ForegroundColor Cyan
 Write-Host ""
 
-# Output logic: creates the logs directory if it does not exist
-$logsDir = "$root\logs"
-if (-not (Test-Path $logsDir)) { New-Item -ItemType Directory -Path $logsDir | Out-Null }
-
-# Pure function: starts a Java service in a new window and returns the process
-function Start-JavaService {
-    param([string]$Name, [string]$ServicePath, [int]$Port)
-
-    Write-Host "Building $Name..." -ForegroundColor Yellow
-    Push-Location $ServicePath
-    $buildResult = mvn package -DskipTests -q 2>&1
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "  [FAIL] Build failed for $Name" -ForegroundColor Red
-        Write-Host $buildResult
-        Pop-Location
-        return $null
-    }
-    Write-Host "  [PASS] $Name built successfully." -ForegroundColor Green
-
-    $jarFile = Get-ChildItem "$ServicePath\target\*.jar" | Where-Object { $_.Name -notlike "*sources*" } | Select-Object -First 1
-    if (-not $jarFile) {
-        Write-Host "  [FAIL] No JAR found for $Name" -ForegroundColor Red
-        Pop-Location
-        return $null
-    }
-
-    $logFile = "$logsDir\$Name.log"
-    $proc = Start-Process -FilePath "java" `
-        -ArgumentList "-jar", $jarFile.FullName `
-        -RedirectStandardOutput $logFile `
-        -RedirectStandardError "$logsDir\$Name-error.log" `
-        -WindowStyle Hidden `
-        -PassThru
-
-    Pop-Location
-    Write-Host "  [PASS] $Name started (PID: $($proc.Id)) on port $Port" -ForegroundColor Green
-    return $proc
+# Check Docker is running
+try {
+    docker info 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw }
+} catch {
+    Write-Host "  [FAIL] Docker is not running. Start Docker Desktop and try again." -ForegroundColor Red
+    exit 1
 }
 
-# Start Auth Service
-$authProc = Start-JavaService -Name "auth-service" -ServicePath "$root\auth-service" -Port 8081
-
-# Start Leave Service
-$leaveProc = Start-JavaService -Name "leave-service" -ServicePath "$root\leave-service" -Port 8082
-
-# Start API Gateway
-$gatewayProc = Start-JavaService -Name "api-gateway" -ServicePath "$root\api-gateway" -Port 8080
-
-# Wait for services to start
-Write-Host ""
-Write-Host "Waiting for services to initialise (30 seconds)..." -ForegroundColor Yellow
-Start-Sleep -Seconds 30
-
-# Health checks
-Write-Host "Running health checks..." -ForegroundColor Yellow
-$services = @(
-    @{ Name = "Auth Service"; Url = "http://localhost:8081/actuator/health" },
-    @{ Name = "Leave Service"; Url = "http://localhost:8082/actuator/health" },
-    @{ Name = "API Gateway"; Url = "http://localhost:8080/actuator/health" }
-)
-
+# Build Java JARs (required before docker-compose build)
+$services = @("auth-service", "leave-service", "api-gateway")
 foreach ($svc in $services) {
-    try {
-        $response = Invoke-RestMethod -Uri $svc.Url -TimeoutSec 5
-        Write-Host "  [PASS] $($svc.Name): $($response.status)" -ForegroundColor Green
-    } catch {
-        Write-Host "  [WARN] $($svc.Name): Not responding yet (may still be starting)" -ForegroundColor Yellow
+    Write-Host "Building $svc JAR..." -ForegroundColor Yellow
+    Push-Location "$root\$svc"
+    mvn package -DskipTests -q 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "  [FAIL] Maven build failed for $svc. Check Java/Maven installation." -ForegroundColor Red
+        Pop-Location
+        exit 1
     }
+    Write-Host "  [PASS] $svc JAR built." -ForegroundColor Green
+    Pop-Location
 }
 
-# Start Frontend
+# Build Docker images
 Write-Host ""
-Write-Host "Installing and starting React frontend..." -ForegroundColor Yellow
-Push-Location "$root\frontend"
-if (-not (Test-Path "node_modules")) {
-    Write-Host "  Installing npm packages..." -ForegroundColor Yellow
-    npm install --silent
+Write-Host "Building Docker images..." -ForegroundColor Yellow
+Set-Location $root
+docker-compose build 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [FAIL] docker-compose build failed." -ForegroundColor Red
+    exit 1
 }
-$frontendProc = Start-Process -FilePath "npm" `
-    -ArgumentList "start" `
-    -WindowStyle Normal `
-    -PassThru
-Pop-Location
-Write-Host "  [PASS] Frontend starting on http://localhost:3000" -ForegroundColor Green
+Write-Host "  [PASS] All images built." -ForegroundColor Green
 
-# Save PIDs for Stop-App.ps1
-$pids = @{
-    auth    = $authProc?.Id
-    leave   = $leaveProc?.Id
-    gateway = $gatewayProc?.Id
-    frontend = $frontendProc?.Id
+# Start containers
+Write-Host ""
+Write-Host "Starting containers..." -ForegroundColor Yellow
+docker-compose up -d 2>&1 | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  [FAIL] docker-compose up failed." -ForegroundColor Red
+    exit 1
 }
-$pids | ConvertTo-Json | Out-File "$root\scripts\.running-pids.json" -Encoding utf8
+
+# Wait for health checks
+Write-Host "Waiting for services to become healthy (up to 60 seconds)..." -ForegroundColor Yellow
+$timeout = 60
+$elapsed = 0
+$allHealthy = $false
+while ($elapsed -lt $timeout) {
+    Start-Sleep -Seconds 5
+    $elapsed += 5
+    $statuses = docker ps --format "{{.Names}}|{{.Status}}" 2>&1
+    $unhealthy = $statuses | Where-Object { $_ -match "starting|unhealthy" }
+    $exited    = $statuses | Where-Object { $_ -match "Exited" }
+    if ($exited) {
+        Write-Host "  [FAIL] One or more containers exited. Run 'docker-compose logs' for details." -ForegroundColor Red
+        exit 1
+    }
+    if (-not $unhealthy) { $allHealthy = $true; break }
+    Write-Host "  ... still starting ($elapsed s)" -ForegroundColor Gray
+}
+
+if (-not $allHealthy) {
+    Write-Host "  [WARN] Services did not all report healthy within $timeout seconds." -ForegroundColor Yellow
+    Write-Host "         Run 'docker ps' to check status manually." -ForegroundColor Yellow
+} else {
+    Write-Host "  [PASS] All services healthy." -ForegroundColor Green
+}
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Cyan
@@ -108,13 +84,13 @@ Write-Host "  Application started successfully!" -ForegroundColor Green
 Write-Host ""
 Write-Host "  Frontend:      http://localhost:3000" -ForegroundColor White
 Write-Host "  API Gateway:   http://localhost:8080" -ForegroundColor White
-Write-Host "  Auth Service:  http://localhost:8081" -ForegroundColor White
-Write-Host "  Leave Service: http://localhost:8082" -ForegroundColor White
+Write-Host "  Auth Service:  http://localhost:8081/actuator/health" -ForegroundColor White
+Write-Host "  Leave Service: http://localhost:8082/actuator/health" -ForegroundColor White
 Write-Host ""
 Write-Host "  Demo Accounts:" -ForegroundColor White
-Write-Host "    admin / admin123        (Admin)" -ForegroundColor White
-Write-Host "    lwazi.manager / password (Manager)" -ForegroundColor White
-Write-Host "    colile.employee / password (Employee)" -ForegroundColor White
+Write-Host "    admin / Admin@1234            (Admin)" -ForegroundColor White
+Write-Host "    lwazi.manager / Manager@1234  (Manager)" -ForegroundColor White
+Write-Host "    colile.employee / Employee@1234 (Employee)" -ForegroundColor White
 Write-Host ""
-Write-Host "  Run Stop-App.ps1 to stop all services." -ForegroundColor Yellow
+Write-Host "  Run .\scripts\Stop-App.ps1 to stop all services." -ForegroundColor Yellow
 Write-Host "============================================================" -ForegroundColor Cyan

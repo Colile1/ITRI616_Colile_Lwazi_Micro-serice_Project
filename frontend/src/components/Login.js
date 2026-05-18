@@ -87,9 +87,9 @@ export default function Login() {
 
         <div style={styles.hint}>
           <strong>Demo accounts:</strong><br />
-          admin / admin123 (Admin)<br />
-          lwazi.manager / password (Manager)<br />
-          colile.employee / password (Employee)
+          admin / Admin@1234 (Admin)<br />
+          lwazi.manager / Manager@1234 (Manager)<br />
+          colile.employee / Employee@1234 (Employee)
         </div>
       </div>
     </div>

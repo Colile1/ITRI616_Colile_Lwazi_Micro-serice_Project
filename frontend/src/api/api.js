@@ -1,7 +1,7 @@
 // api.js : centralised API client that always routes through the API Gateway
 import axios from 'axios';
 
-const GATEWAY_URL = 'http://localhost:8080';
+const GATEWAY_URL = process.env.REACT_APP_API_URL || '';
 
 // Pure function: builds an axios instance with the stored JWT token
 const createApiClient = () => {
