@@ -1,0 +1,199 @@
+# ============================================================
+# .gitignore — Secure Leave Management System (Cybersecurity Project)
+# Spring Boot / Java / Maven / Docker / Kubernetes
+# ============================================================
+# .gitignore
+.claude/*
+.sixth/*
+rules.md
+rubric.md 
+PROJECT_STATUS_REPORT.md
+FREE_DEPLOYMENT_GUIDE.md
+# CHANGELOG.md
+PRESENTATION_GUIDE.md
+GRADING_REPORT*.md
+THEORY_COMPONENT.md
+
+# -------------------------------------------------------
+# SECURITY: NEVER COMMIT THESE
+# -------------------------------------------------------
+*.env
+.env
+.env.*
+.env.local
+.env.production
+.env.staging
+secrets/
+secret.yaml
+*-secret.yaml
+*.pem
+*.key
+*.p12
+*.jks
+*.pfx
+*.crt
+*.cer
+*.der
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+credentials.json
+credentials.yaml
+service-account*.json
+*_credentials.*
+*-credentials.*
+vault-token
+.vault-token
+htpasswd
+.htpasswd
+kubeconfig
+
+# -------------------------------------------------------
+# Java / Maven build artifacts
+# -------------------------------------------------------
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+*.class
+*.jar
+*.war
+*.ear
+hs_err_pid*
+replay_pid*
+
+# Maven wrapper
+.mvn/timing.properties
+
+# -------------------------------------------------------
+# Spring Boot — local/prod property overrides
+# -------------------------------------------------------
+application-local.properties
+application-local.yml
+application-dev.properties
+application-dev.yml
+application-prod.properties
+application-prod.yml
+bootstrap-local.properties
+bootstrap-local.yml
+
+# -------------------------------------------------------
+# IDEs
+# -------------------------------------------------------
+# IntelliJ IDEA
+.idea/
+.idea/modules.xml
+.idea/jarRepositories.xml
+.idea/compiler.xml
+.idea/libraries/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Eclipse
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+bin/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# -------------------------------------------------------
+# Docker
+# -------------------------------------------------------
+docker-compose.override.yml
+docker-compose.local.yml
+
+# -------------------------------------------------------
+# Kubernetes — never commit secret manifests
+# -------------------------------------------------------
+*-secret.yaml
+*-configmap-local.yaml
+
+# -------------------------------------------------------
+# Logs — never commit log output
+# -------------------------------------------------------
+logs/
+*.log
+*.log.*
+log/
+spring.log
+nohup.out
+
+# -------------------------------------------------------
+# OS files
+# -------------------------------------------------------
+# Windows
+Thumbs.db
+ehthumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+._*
+.Spotlight-V7
+.Trashes
+
+# Linux
+*~
+.fuse_hidden*
+.nfs*
+
+# -------------------------------------------------------
+# Node / npm (ui-service if applicable)
+# -------------------------------------------------------
+node_modules/
+npm-debug.log*
+yarn-error.log*
+.npm
+
+# -------------------------------------------------------
+# Database dump / data files
+# -------------------------------------------------------
+*.sql.bak
+*.db
+*.sqlite
+*.h2.db
+data/
+db-data/
+mysql-data/
+
+# -------------------------------------------------------
+# Test and coverage reports
+# -------------------------------------------------------
+/test-results/
+/coverage/
+*.exec
+
+# -------------------------------------------------------
+# Temporary and backup files
+# -------------------------------------------------------
+*.tmp
+*.temp
+*.bak
+*.swp
+*.swo
+.cache/
+tmp/
+temp/
