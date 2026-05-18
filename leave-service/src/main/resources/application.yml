@@ -1,11 +1,11 @@
 server:
-  port: 8081
+  port: 8082
 
 spring:
   application:
-    name: auth-service
+    name: leave-service
   datasource:
-    url: jdbc:h2:mem:authdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: jdbc:h2:mem:leavedb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password: ""
@@ -14,18 +14,13 @@ spring:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
-    defer-datasource-initialization: true
   h2:
     console:
       enabled: true
       path: /h2-console
-  sql:
-    init:
-      mode: never
 
 jwt:
   secret: ${JWT_SECRET:U2VjdXJlTGVhdmVNYW5hZ2VtZW50MjAyNCFTZWNyZXRLZXlATldV}
-  expiration: 86400000
 
 management:
   endpoints:
@@ -45,4 +40,4 @@ logging:
     console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
   file:
-    name: logs/auth-service.log
+    name: logs/leave-service.log
